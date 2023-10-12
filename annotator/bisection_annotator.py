@@ -126,7 +126,7 @@ class BissectionAnnotator:
         ''' Returns: score and text of the datapoint in self.df closest 
         to the median (float) given as input.
         '''
-        texts = self.df['text'].to_list()
+        texts = self.df[self.text_column].to_list()
         scores = np.array(self.df['scores_for_annot'].to_list())
         scores_diff = np.abs(scores - median)
         sorted_indices = np.argsort(scores_diff)
@@ -375,7 +375,7 @@ class BissectionAnnotator:
         return tbc, early_stop
     
     
-    def __call__(self, claim_idx, claim_text, class_idx, class_text, column='ZSL_scores'):
+    def __call__(self, claim_idx, claim_text, class_idx, class_text, column='ZSL_scores', text_column="text"):
         ''' Main function called by user to annotate a claim. Input:
         - claim_idx (str): ID of the claim to annotate
         - claim_text (str): text of claim to annotate
@@ -389,6 +389,7 @@ class BissectionAnnotator:
         self.claim_text = claim_text
         self.class_text = class_text
         self.class_idx = class_idx
+        self.text_column = text_column
         
         # Initialise an empty record for the annotation
         self.texts_list = list()
@@ -410,7 +411,7 @@ class BissectionAnnotator:
             if len(rel_df) == 0:
                 self.cache = dict()
             else:
-                list_annot = list(rel_df.apply(lambda x: (x['text'], x[annot_idx + '_annot']), axis=1))
+                list_annot = list(rel_df.apply(lambda x: (x[self.text_column], x[annot_idx + '_annot']), axis=1))
                 self.cache = dict(list_annot)
         else:
             self.cache = dict()
@@ -427,11 +428,11 @@ class BissectionAnnotator:
         tbc, early_stop = self.probabilistic_bisection()
         
         # Save cache into dataframe
-        self.df[class_idx + '_annot'] = self.df['text'].apply(lambda x: '' if not x in self.cache else (1 if self.cache[x] == 1 else (0 if self.cache[x] == 0 else '')))
+        self.df[class_idx + '_annot'] = self.df[self.text_column].apply(lambda x: '' if not x in self.cache else (1 if self.cache[x] == 1 else (0 if self.cache[x] == 0 else '')))
         new_cache = pd.DataFrame()
         text_list = list(self.cache.keys())
         annot_list = list(self.cache.values())
-        new_cache['text'] = text_list
+        new_cache[self.text_column] = text_list
         new_cache[annot_idx + '_annot'] = annot_list
         
         # Save annotation record as dictionary
